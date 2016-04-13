@@ -6,6 +6,7 @@ var Q = require('q');
 var zlib = require('zlib');
 var winston = require('winston');
 var _ = require('lodash');
+var eumUtilities = require('eum-utilities');
 var customDataBeacon = require('./customDataBeacon');
 
 /*******************************
@@ -361,31 +362,16 @@ var getJSessionId = function(headers) {
 
 var getCorrelationInfo = function(headers) {
 
+    var appDHeaders = eumUtilities.correlationHeaders(headers);
+    var snapshot = (appDHeaders.serverSnapshotType && appDHeaders.serverSnapshotType == 'f') ? true : false;
     var c = {
-        fullSnapshot : false
+        fullSnapshot : snapshot,
+        responseLength : headers['content-length'],
+        correlationId : appDHeaders.clientRequestGUID || null,
+        btId : appDHeaders.btId || null,
+        btERT : appDHeaders.btERT,
     };
 
-    c.responseLength = headers['content-length'];
-
-    if (headers['adrum_0']) {
-        c.correlationId = headers['adrum_0'].split(':')[1];
-    }
-    if (headers['adrum_1']) {
-        c.btId = headers['adrum_1'].split(':')[1];
-    }
-    if (headers['adrum_2']) {
-        c.btERT =  headers['adrum_2'].split(':')[1];
-    }
-    if (headers['adrum_3'] || headers['adrum4']) {
-        [headers['adrum_3'],headers['adrum_4']].forEach(function(value) {
-            if (value) {
-                var split = value.split(':');
-                if (split[0] === 'serverSnapshotType') {
-                    c.fullSnapshot = true;
-                }
-            }
-        });
-    }
     return c;
 }
 
@@ -428,7 +414,8 @@ var getInfo = function() {
         carrier : carrier,
         connection : connection,
         appVersion : appVersion,
-        agentId : 'agent-id-' + _.random(0,1000)
+        agentId : 'agent-id-' + _.random(0,1000),
+        ipv4 : eumUtilities.getRandomIpFromCountry(geo)
     };
 };
 
@@ -464,6 +451,7 @@ var getDefaultAppStartBeacon = function() {
         "ca": "中国电信",
         "osv": "iOS 5.1",
         "geo": "Jordan",
+        "ipV4Address" : "5.45.128.0",
         "groupId": "gid-7",
         "jailBroken": "false",
         "agentId": "agent-id-33",
@@ -563,6 +551,7 @@ var updateStandardBeaconProps = function(beacon, sessionData) {
     beacon.ca = sessionData.info.carrier;
     beacon.agentId = sessionData.info.agentId;
     beacon.ct = sessionData.info.connection;
+    beacon.ipV4Address = sessionData.info.ipv4;
 }
 
 var getNetworkRequestBeacon = function(sessionData, correlationInfo) {

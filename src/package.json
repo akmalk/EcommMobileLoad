@@ -9,6 +9,7 @@
   "author": "rbolton@appdynamics.com",
   "license": "ISC",
   "dependencies": {
+    "eum-utilities": "^0.1.0",
     "lodash": "^3.10.1",
     "q": "^1.4.1",
     "request": "^2.67.0",
