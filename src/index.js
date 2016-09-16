@@ -43,25 +43,31 @@ var getScreens = function() {
             name : 'LoginView',
             network : {url : serverHost + '/appdynamicspilot/rest/user', getPage : getLogin, processPage : processLogin},
             infoPoint : {infoClass : 'Authenticate', infoMethod : 'login'},
-            customMetric : {name : 'Login Attempts', value : '1'}
+            customMetric : {name : 'Login Attempts', value : '1'},
+            uiEvent : {event : "Text Field Focused", uiClass : "UITextField"},
+            systemEvent : {from : "wifi", to : "cellular"}
         },
         {
             name : 'ListView',
             network : {url : serverHost + '/appdynamicspilot/rest/items/all', getPage : getPage, processPage : processPage},
             timer : {name : 'Render Items Screen'},
             infoPoint : {infoClass : 'Catalog', infoMethod : 'parseCatalog'},
-            customMetric : {name : 'Items Rendered', value : '14'}
+            customMetric : {name : 'Items Rendered', value : '14'},
+            uiEvent : {event : "Text View Focused", uiClass : "UITextView"},
         },
         {
             name : 'CartView',
             network : {url : serverHost + '/appdynamicspilot/rest/cart/1', getPage : getPage, processPage : processPage},
-            infoPoint : {infoClass : 'Cart', infoMethod : 'checkCart'}
+            infoPoint : {infoClass : 'Cart', infoMethod : 'checkCart'},
+            uiEvent : {event : "Table Cell Selected", uiClass : "UITableView"},
+            systemEvent : {from : "cellular", to : "wifi"}
         },
         {
             name : 'CheckoutView',
             network : {url : serverHost + '/appdynamicspilot/rest/cart/co', getPage : getCheckout, processPage : processPage},
             infoPoint : {infoClass : 'Cart', infoMethod : 'validateOrder'},
-            customMetric : {name : 'Total Cart Size', value : '56'}
+            customMetric : {name : 'Total Cart Size', value : '56'},
+            uiEvent : {event : "Button Pressed", uiClass : "UIButton"},
         }
     ];
 };
@@ -120,7 +126,7 @@ var session = function(sessionData) {
         }
 
         //introduce checkout crash and new steps
-        if (_.random(0,100) < 8) {
+        if (_.random(0,100) < 108) {
             sessionData.screens.splice(3,0,{name : 'SettingsView'});
             sessionData.screens.splice(4,0,{name : 'ChangeAddressView', infoPoint : {infoClass : 'Settings', infoMethod : 'changeBillingAddress'}});
             sessionData.screens[5].crash = true;
@@ -195,6 +201,19 @@ var session = function(sessionData) {
                 if (customBeacon.length > 0) {
                     sendBeacon(customBeacon, sessionData, 'Custom Data');
                 }
+                var uiBeacon = getUiBeacon(sessionData);
+                if (uiBeacon.length > 0) {
+                    setTimeout(function() {
+                        sendBeacon(uiBeacon, sessionData, 'UI Beacon');
+                    }, 100);
+                }
+
+                var systemBeacon = getSystemBeacon(sessionData);
+                if (systemBeacon.length > 0) {
+                    setTimeout(function() {
+                        sendBeacon(systemBeacon, sessionData, 'System Beacon');
+                    }, 50);
+                }
             }).catch(function(err) {
                 logger.log('error', 'App request error : ' + err.message, err.stack);
                 setTimeout(session(sessionData), 1000);
@@ -204,6 +223,19 @@ var session = function(sessionData) {
             var customBeacon = getCustomBeacon(sessionData);
             if (customBeacon.length > 0) {
                 sendBeacon(customBeacon, sessionData, 'Custom Data');
+            }
+            var uiBeacon = getUiBeacon(sessionData);
+            if (uiBeacon.length > 0) {
+                setTimeout(function() {
+                    sendBeacon(uiBeacon, sessionData, 'UI Beacon');
+                }, 100);
+            }
+
+            var systemBeacon = getSystemBeacon(sessionData);
+            if (systemBeacon.length > 0) {
+                setTimeout(function() {
+                    sendBeacon(systemBeacon, sessionData, 'System Beacon');
+                }, 50);
             }
             setTimeout(function() {
                 session(sessionData);
@@ -228,6 +260,23 @@ var getCustomBeacon = function(sessionData) {
     }
     return customBeacon;
 }
+
+var getUiBeacon = function(sessionData) {
+    var customBeacon = [];
+    if (!_.isUndefined(sessionData.currentScreen.uiEvent)) {
+        customBeacon.push(getUiEvent(sessionData, sessionData.currentScreen.uiEvent.event, sessionData.currentScreen.uiEvent.uiClass));
+    }
+    return customBeacon;
+}
+
+var getSystemBeacon = function(sessionData) {
+    var customBeacon = [];
+    if (!_.isUndefined(sessionData.currentScreen.systemEvent)) {
+        customBeacon.push(getSystemEvent(sessionData, sessionData.currentScreen.systemEvent.from, sessionData.currentScreen.systemEvent.to));
+    }
+    return customBeacon;
+}
+
 var getCheckout = function(sessionData) {
     return getPage(sessionData,  {'appdynamicssnapshotenabled' : 'true'});
 }
@@ -258,6 +307,35 @@ var getTimer = function(sessionData, name) {
     updateStandardBeaconProps(timer, sessionData);
     return timer;
 }
+
+var androidClass = {
+    UIButton : "android.widget.Button",
+    UITextField : "android.widget.TextField",
+    UITextView : "android.widget.TextView",
+    UITableView : "android.widget.View"
+}
+
+var getUiEvent = function(sessionData, event, uiClass) {
+    if (mobilePlatform === 'iOS') {
+        uiEvent = {"dmo":"iPad2,1","dm":"Apple","av":"1.1","avi":13,"ca":"Verizon","osv":"iOS 6.0","geo":"United States","ipV4Address":"3.189.105.20","groupId":"gid-7","jailBroken":"false","agentId":"agent-id-11","bts":[],"userdata":{"Wizardry Level":"UserdataSimplest"},"userdataLong":{"height":4254},"userdataDouble":{},"userdataBoolean":{},"userdataDateTimestampMs":{},"USERDATA_LONG_PREFIX":"LONG:","USERDATA_DOUBLE_PREFIX":"DOUBLE:","USERDATA_BOOLEAN_PREFIX":"BOOLEAN:","USERDATA_CURRENT_DATE_TIME":"CURRENT_DATE_TIME","type":"ui","event":"Text Field Focused","uiClass":"UITextField","uiResponder":"IOSTextFieldController","uiAccessibilityLabel":"An iOS text field","uiTag":5,"rootView":"LoginView"}
+        uiEvent.UITextField = uiClass;
+    } else {
+        uiEvent = {"dmo":"Galaxy Nexus","dm":"Samsung","av":"1.0","avi":10,"ca":"AT&T","osv":"Android 2.3","geo":"China","ipV4Address":"9.76.6.165","groupId":"gid-2","jailBroken":"false","agentId":"agent-id-22","bts":[],"userdata":{"Item Purchased":"Pizza","Toppings":"Lotsa-Mottsa"},"userdataLong":{},"userdataDouble":{},"userdataBoolean":{},"userdataDateTimestampMs":{},"USERDATA_LONG_PREFIX":"LONG:","USERDATA_DOUBLE_PREFIX":"DOUBLE:","USERDATA_BOOLEAN_PREFIX":"BOOLEAN:","USERDATA_CURRENT_DATE_TIME":"CURRENT_DATE_TIME","type":"ui","event":"Text View Focused","uiClass":"android.widget.TextView","uiResponder":"con.test.app.SomeTextViewActivity$1","uiAccessibilityLabel":"An Android text view","activity":"LoginView"}
+        uiEvent.UITextField = androidClass[uiClass];
+    }
+    uiEvent.event = event;
+    updateStandardBeaconProps(uiEvent, sessionData);
+    return uiEvent;
+}
+
+var getSystemEvent = function(sessionData, from, to) {
+    var systemEvent = {"dmo":"Galaxy Nexus","dm":"Samsung","av":"1.0","avi":10,"ca":"中国电信","osv":"Android 4.2","geo":"Jordan","ipV4Address":"167.54.7.79","groupId":"gid-6","jailBroken":"true","agentId":"agent-id-22","bts":[],"userdata":{"Name":"Jenkins","Wizardry Level":"UserdataAllTypes"},"userdataLong":{"Length":342},"userdataDouble":{"NumberPi":-3.14},"userdataBoolean":{"BooleanTrue":true},"userdataDateTimestampMs":{"CurrentTime":1473877616120},"USERDATA_LONG_PREFIX":"LONG:","USERDATA_DOUBLE_PREFIX":"DOUBLE:","USERDATA_BOOLEAN_PREFIX":"BOOLEAN:","USERDATA_CURRENT_DATE_TIME":"CURRENT_DATE_TIME","type":"system-event","event":"Connection Transition","ctt":"Data Connection Transition","pct":"wifi","cct":"cellular"};
+    systemEvent.pct = from;
+    systemEvent.cct = to;
+    updateStandardBeaconProps(systemEvent, sessionData);
+    return systemEvent;
+}
+
 var getPage = function(sessionData, headers) {
     var headers = headers || {};
     var deferred = Q.defer();
@@ -645,15 +723,17 @@ var updateCrashBeacon = function(sessionData, beacon) {
         beacon.dmo = sessionData.info.device[0];
         beacon.dm = sessionData.info.device[1];
 
+
         if (sessionData.info.appVersion == '2.0') {
             beacon.androidCrashReport.stackTrace.cause.cause.stackTraceElements[0].c = 'com.appdynamics.pmdemoapps.android.ECommerceAndroid.Utilities';
             beacon.androidCrashReport.stackTrace.cause.cause.stackTraceElements[0].f = 'Utilities.java';
-            beacon.androidCrashReport.stackTrace.cause.cause.stackTraceElements[0].l = '134';
+            beacon.androidCrashReport.stackTrace.cause.cause.stackTraceElements[0].l = 619;
         } else if (sessionData.info.appVersion == '2.1') {
             beacon.androidCrashReport.stackTrace.cause.cause.stackTraceElements[0].c = 'com.appdynamics.pmdemoapps.android.ECommerceAndroid.Promo';
             beacon.androidCrashReport.stackTrace.cause.cause.stackTraceElements[0].f = 'Promo.java';
-            beacon.androidCrashReport.stackTrace.cause.cause.stackTraceElements[0].l = '84';
+            beacon.androidCrashReport.stackTrace.cause.cause.stackTraceElements[0].l = 584;
         }
+
     }
 
     beacon.ca = sessionData.info.carrier;
