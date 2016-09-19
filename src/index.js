@@ -126,7 +126,7 @@ var session = function(sessionData) {
         }
 
         //introduce checkout crash and new steps
-        if (_.random(0,100) < 108) {
+        if (_.random(0,100) < 10) {
             sessionData.screens.splice(3,0,{name : 'SettingsView'});
             sessionData.screens.splice(4,0,{name : 'ChangeAddressView', infoPoint : {infoClass : 'Settings', infoMethod : 'changeBillingAddress'}});
             sessionData.screens[5].crash = true;
