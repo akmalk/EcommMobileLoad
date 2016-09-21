@@ -1,1 +1,1 @@
-docker build -t appdynamics/ecommerce-mobile-load .
+docker build -t appddemo/ecommerce_mobile_load .
